@@ -47,3 +47,47 @@ After a successful restoration, securely handle or remove the temporary plaintex
 - Store the passphrase outside GitHub, ideally in KeePassXC with its own independent backup.
 - If the passphrase is lost, this backup cannot be decrypted. If it is exposed, rotate affected credentials and keys as appropriate.
 - To recover the *complete* Metabase system, also preserve the `metabase_app` PostgreSQL database and the analytics database separately. This encrypted file only backs up environment settings.
+
+
+## Restore the Metabase application database snapshot
+
+The encrypted file `metabase_app_backup.dump.age` is a PostgreSQL **custom-format** backup of the Metabase application database, created on 19 November 2026. It holds saved questions, dashboards, collections, and other application metadata **as of that snapshot**. It does not contain the analytics database `sa_enterprise_demo`.
+
+**Do not run database restore commands against a working Metabase installation.** First stop the Metabase container and back up the current `metabase_app` database. Restoring overwrites application state and can lose changes made after the snapshot. Use a separate recovery host or test database when possible.
+
+### 1. Decrypt the snapshot locally
+
+From the directory containing the downloaded encrypted file:
+
+```bash
+umask 077
+age --decrypt --output "$HOME/metabase_app_backup.dump" metabase_app_backup.dump.age
+chmod 600 "$HOME/metabase_app_backup.dump"
+pg_restore --list "$HOME/metabase_app_backup.dump" | head -30
+```
+
+Enter the passphrase interactively. The `pg_restore --list` command reads the archive catalog only; it does not change any database.
+
+### 2. Plan the database restore
+
+On a **fresh recovery instance**, install a compatible PostgreSQL version, create the Metabase application role and a **new, empty** `metabase_app` database owned by that role, then restore the archive. Example for a deliberately empty database:
+
+```bash
+sudo -u postgres pg_restore \
+  --dbname=metabase_app \
+  --no-owner --no-acl \
+  --exit-on-error \
+  "$HOME/metabase_app_backup.dump"
+```
+
+**Important:** The `postgres` OS account may not be able to read a dump under your private home directory (mode 600). Stage the decrypted dump in a PostgreSQL-readable, tightly restricted location or invoke `pg_restore` using a suitably authorized account with file access. The command is an illustrative restore template, **not** a command to execute blindly on the original server. Do not use `--clean` or drop an existing database without a separate, confirmed recovery plan.
+
+### 3. Restore the matching configuration
+
+Follow the environment-file instructions above to decrypt `metabase.env.age`. Configure the restored Metabase instance to use the recovered `metabase_app` database and its **matching original** `MB_ENCRYPTION_SECRET_KEY`. Review the original database password, session key, host/port settings, and Metabase image version before starting the container. The original Compose uses `metabase/metabase:latest`; a future release may perform irreversible database migrations. Prefer a known-compatible, pinned Metabase version.
+
+### 4. Validate and protect
+
+After restoring into a **test instance**, confirm that dashboards, saved questions, and database connections work before using the recovered environment in production. Restore the analytics database separately if it is missing. Remove temporary plaintext dumps after recovery and keep the encrypted originals plus the KeePassXC passphrase backup in separate secure locations.
+
+**Backup limitations:** Neither encrypted file is proof of a tested end-to-end restore. No restore test has been performed as part of this repository documentation.
