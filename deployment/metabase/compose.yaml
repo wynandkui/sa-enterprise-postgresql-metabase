@@ -1,0 +1,13 @@
+# Sanitized copy of the working Raspberry Pi Compose configuration (2026-11-19).
+# Keep the actual .env file private. Run from this directory.
+services:
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - .env
+    mem_limit: 1536m
+    security_opt:
+      - no-new-privileges:true
