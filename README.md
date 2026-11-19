@@ -37,7 +37,7 @@ The PostgreSQL relations are prefixed `tbl_` in the deployed schema. Four report
 6. [Operations and security](docs/06-operations-and-security.md)
 7. [Reproduction checklist](docs/07-reproduction-checklist.md)
 
-**Scope:** This repository records the verified workflow and design. It does not yet include a tested one-command installer, the complete original SQL generator scripts, or a PostgreSQL dump. The original generator files reside on the Raspberry Pi at `/home/wynand/sa-enterprise-generator/`.
+**SQL sources:** The [current PostgreSQL schema](sql/schema/sa_enterprise_schema_current.sql) is the authoritative DDL export for the deployed `tbl_` tables. Seven [original generator scripts](sql/generators/) are included; the [historical schema](sql/historical/sa_enterprise_schema.sql) predates the `tbl_` renaming and must not be used interchangeably with the current schema. These files have not been validated as a complete, fresh-install reproduction. A tested one-command installer, pinned Compose configuration, and Metabase collection export are not provided.
 
 ## Safety
 Never commit passwords, Docker environment secrets, Metabase encryption keys, real customer information, or unreviewed database dumps. Do not publish the LAN dashboard to the internet without HTTPS and authentication.
